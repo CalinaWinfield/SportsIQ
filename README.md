@@ -1,18 +1,18 @@
 <<<<<<< HEAD
-# ?? SportIQ — Sports Logo Quiz & ESPN FanHub
+# SportIQ Sports Logo Quiz & ESPN FanHub
 
 A modern, full-stack sports quiz game and personalized fan hub for **NFL, NBA, College Football (CFB), and WNBA**.
 
 ---
 
-## ?? Features
+## Features
 
-### ?? 1. Sports Logo Quiz Arena
+### 1. Sports Logo Quiz Arena
 - **Four Leagues & All-Stars Mix**:
   - **NFL**: 32 franchises
   - **NBA**: 30 franchises
-  - **CFB**: 130+ Division 1 FBS Powerhouses (Ohio State, Alabama, Georgia, Michigan, Texas, etc.)
-  - **WNBA**: 15 franchises (Aces, Liberty, Fever, Storm, etc.)
+  - **CFB**: 101 Division 1 FBS Powerhouses (from SEC, Big Ten, Big 12, ACC, Sun Belt, SWAC, and Pac-10)
+  - **WNBA**: 15 franchises (Aces, Liberty, Dream, Storm, etc.)
   - **All-Star Challenge**: Mixed randomized logos across all 4 leagues!
 - **Three Game Modes**:
   - **Classic Quiz**: 10 or 20 questions with 15-second per-question timer.
@@ -29,7 +29,7 @@ A modern, full-stack sports quiz game and personalized fan hub for **NFL, NBA, C
   - Hints system (reveals conference or location with minor point penalty).
   - Question review breakdown with logos, accuracy %, and celebratory confetti!
 
-### ?? 2. ESPN FanHub ("My Teams")
+### 2. ESPN FanHub ("My Teams")
 - **Follow / Unfollow**: Search and follow any team across NFL, NBA, CFB, and WNBA.
 - **Live Scores & Games**: Live quarter/period, game clock, broadcast channel (ESPN, ABC, CBS, TNT), and scores.
 - **Team Schedules**: Upcoming fixture dates, venues, and countdowns.
@@ -37,21 +37,21 @@ A modern, full-stack sports quiz game and personalized fan hub for **NFL, NBA, C
 - **Standings & Records**: Season records (W-L) and conference/division standings.
 - **Live Scoreboard Ticker**: ESPN-style top scores ticker auto-refreshing across all leagues.
 
-### ?? 3. User Accounts & Leaderboard
+### 3. User Accounts & Leaderboard
 - **Authentication**: Sign up, Login, and Guest Mode. Passwords hashed with `bcryptjs`, authenticated via JWT.
 - **Career Stats**: Total games, overall accuracy %, best win streak, high scores per league.
 - **Global Leaderboard**: Compare top logo scores filtered by league and mode.
 
 ---
 
-## ??? Tech Stack
+## Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Canvas Confetti, Web Audio API.
 - **Backend**: Node.js, Express, TypeScript, SQLite/JSON database with atomic file transactions, JWT authentication, bcryptjs.
 - **Data Source**: ESPN official public REST APIs (zero API keys or credentials needed).
 
 ---
 
-## ?? Running the Application
+## Running the Application
 
 ### 1. Install Dependencies
 ```bash
@@ -71,5 +71,3 @@ npm run build
 npm start
 ```
 =======
-# SportsIQ
->>>>>>> 32f674c40ddf25c75b88c4220bf0801c4ff358df
