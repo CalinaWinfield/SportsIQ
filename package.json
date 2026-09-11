@@ -1,0 +1,16 @@
+{
+  "name": "sports-logo-app",
+  "version": "1.0.0",
+  "description": "SportIQ - Sports Logo Quiz and ESPN-style FanHub for NFL, NBA, CFB, and WNBA",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "node run-dev.js",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:server && npm run build:client",
+    "start": "node server/dist/index.js"
+  }
+}
