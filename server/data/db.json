@@ -461,6 +461,17 @@
       "abbreviation": "JMU",
       "color": "#450084",
       "createdAt": "2026-09-12T00:02:45.151Z"
+    },
+    {
+      "id": "fav_1789174045335_9d91",
+      "userId": "user_1789072671969_sxxgvl",
+      "league": "college-football",
+      "teamId": "2755",
+      "teamName": "Grambling Tigers",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/2755.png",
+      "abbreviation": "GRAM",
+      "color": "#ee8601",
+      "createdAt": "2026-09-12T00:47:25.335Z"
     }
   ]
 }
