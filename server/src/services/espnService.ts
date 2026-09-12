@@ -1,4 +1,4 @@
-﻿export interface SportTeam {
+export interface SportTeam {
   id: string;
   name: string;
   displayName: string;
@@ -14,6 +14,16 @@
   standing?: string;
   record?: string;
   isFBSorSWAC?: boolean;
+}
+
+export interface SportsWeekInfo {
+  startWednesday: string; // YYYY-MM-DD
+  endTuesday: string;     // YYYY-MM-DD
+  startFormatted: string; // YYYYMMDD
+  endFormatted: string;   // YYYYMMDD
+  espnDatesParam: string; // YYYYMMDD-YYYYMMDD
+  displayLabel: string;   // e.g. "Wed, Sep 9 – Tue, Sep 15, 2026"
+  selectedDate: string;   // YYYY-MM-DD
 }
 
 export interface SportGame {
@@ -36,6 +46,7 @@ export interface SportGame {
     score: string;
     record?: string;
     color?: string;
+    conference?: string;
   };
   awayTeam: {
     id: string;
@@ -45,6 +56,7 @@ export interface SportGame {
     score: string;
     record?: string;
     color?: string;
+    conference?: string;
   };
 }
 
@@ -155,6 +167,76 @@ async function fetchCfbConferenceMap(): Promise<Map<string, string>> {
   return teamConfMap;
 }
 
+export function parseLocalDate(input?: string | Date): Date {
+  if (!input) return new Date();
+  if (input instanceof Date) return input;
+  if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    const [y, m, d] = input.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0);
+  }
+  const parsed = new Date(input);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+export function getSportsDateYMD(date: string | Date, timeZone = 'America/New_York'): string {
+  const d = parseLocalDate(date);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(d);
+}
+
+export function getSportsWeekRange(refDate?: string | Date): SportsWeekInfo {
+  const ymd = getSportsDateYMD(refDate || new Date());
+  const [year, month, day] = ymd.split('-').map(Number);
+  const base = new Date(year, month - 1, day, 12, 0, 0);
+  const dayOfWeek = base.getDay(); // 0 = Sun, 1 = Mon, ..., 3 = Wed, ..., 6 = Sat
+  const diffToWed = (dayOfWeek - 3 + 7) % 7;
+
+  const wedDate = new Date(base);
+  wedDate.setDate(base.getDate() - diffToWed);
+
+  const tueDate = new Date(wedDate);
+  tueDate.setDate(wedDate.getDate() + 6);
+
+  const formatStr = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
+  };
+
+  const wedYmd = formatStr(wedDate);
+  const tueYmd = formatStr(tueDate);
+  const startFmt = wedYmd.replace(/-/g, '');
+  const endFmt = tueYmd.replace(/-/g, '');
+
+  const startDisplay = wedDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+  const endDisplay = tueDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  return {
+    startWednesday: wedYmd,
+    endTuesday: tueYmd,
+    startFormatted: startFmt,
+    endFormatted: endFmt,
+    espnDatesParam: `${startFmt}-${endFmt}`,
+    displayLabel: `${startDisplay} – ${endDisplay}`,
+    selectedDate: ymd
+  };
+}
+
 export const espnService = {
   async getTeams(leagueKey: 'nfl' | 'nba' | 'college-football' | 'wnba'): Promise<SportTeam[]> {
     const cached = cache.teams[leagueKey];
@@ -241,7 +323,12 @@ export const espnService = {
     return results.flat();
   },
 
-  async getScoreboard(leagueKey?: 'nfl' | 'nba' | 'college-football' | 'wnba'): Promise<SportGame[]> {
+  async getScoreboard(
+    leagueKey?: 'nfl' | 'nba' | 'college-football' | 'wnba',
+    dateInput?: string
+  ): Promise<{ games: SportGame[]; week: SportsWeekInfo }> {
+    const week = getSportsWeekRange(dateInput);
+
     if (!leagueKey) {
       const leagues: Array<'nfl' | 'nba' | 'college-football' | 'wnba'> = [
         'nfl',
@@ -249,77 +336,110 @@ export const espnService = {
         'college-football',
         'wnba'
       ];
-      const results = await Promise.all(leagues.map(l => this.getScoreboard(l)));
-      return results.flat().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const results = await Promise.all(leagues.map(l => this.getScoreboard(l, dateInput)));
+      const allGames = results.flatMap(r => r.games);
+      allGames.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      return { games: allGames, week };
     }
 
-    const cached = cache.scoreboard[leagueKey];
+    const cacheKey = `${leagueKey}_${week.espnDatesParam}`;
+    const cached = cache.scoreboard[cacheKey];
     const now = Date.now();
     if (cached && now - cached.timestamp < SCOREBOARD_CACHE_TTL) {
-      return cached.data;
+      return { games: cached.data, week };
     }
 
     const conf = LEAGUE_CONFIG[leagueKey];
-    if (!conf) return [];
+    if (!conf) return { games: [], week };
 
-    const url = `https://site.api.espn.com/apis/site/v2/sports/${conf.sport}/${conf.leaguePath}/scoreboard`;
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${conf.sport}/${conf.leaguePath}/scoreboard?dates=${week.espnDatesParam}&limit=1000`;
 
     try {
+      let cfbTeamMap: Map<string, SportTeam> | null = null;
+      if (leagueKey === 'college-football') {
+        const cfbTeams = await this.getTeams('college-football');
+        cfbTeamMap = new Map(cfbTeams.map(t => [t.id, t]));
+      }
+
       const res = await fetch(url);
       if (!res.ok) throw new Error(`ESPN Scoreboard API returned ${res.status}`);
       const json = await res.json();
       const events = json.events || [];
 
-      const games: SportGame[] = events.map((ev: any) => {
-        const comp = ev.competitions?.[0];
-        const statusType = ev.status?.type;
-        const competitors = comp?.competitors || [];
-        const homeComp = competitors.find((c: any) => c.homeAway === 'home') || competitors[0];
-        const awayComp = competitors.find((c: any) => c.homeAway === 'away') || competitors[1];
+      const games: SportGame[] = events
+        .map((ev: any): SportGame | null => {
+          const comp = ev.competitions?.[0];
+          const statusType = ev.status?.type;
+          const competitors = comp?.competitors || [];
+          const homeComp = competitors.find((c: any) => c.homeAway === 'home') || competitors[0];
+          const awayComp = competitors.find((c: any) => c.homeAway === 'away') || competitors[1];
 
-        const isLive = statusType?.state === 'in';
-        const isCompleted = statusType?.completed === true;
+          const homeTeamId = String(homeComp?.team?.id || '');
+          const awayTeamId = String(awayComp?.team?.id || '');
 
-        const broadcast = comp?.broadcasts?.[0]?.names?.[0] || comp?.geoBroadcasts?.[0]?.media?.shortName;
-
-        return {
-          id: String(ev.id),
-          league: leagueKey,
-          date: ev.date,
-          name: ev.name,
-          shortName: ev.shortName,
-          status: statusType?.name || 'STATUS_SCHEDULED',
-          statusDetail: statusType?.shortDetail || statusType?.detail || 'Scheduled',
-          isLive,
-          isCompleted,
-          broadcast,
-          venue: comp?.venue?.fullName,
-          homeTeam: {
-            id: String(homeComp?.team?.id || ''),
-            name: homeComp?.team?.displayName || 'Home Team',
-            abbreviation: homeComp?.team?.abbreviation || '',
-            logo: homeComp?.team?.logo || '',
-            score: homeComp?.score || '0',
-            record: homeComp?.records?.[0]?.summary,
-            color: homeComp?.team?.color ? `#${homeComp?.team?.color}` : undefined
-          },
-          awayTeam: {
-            id: String(awayComp?.team?.id || ''),
-            name: awayComp?.team?.displayName || 'Away Team',
-            abbreviation: awayComp?.team?.abbreviation || '',
-            logo: awayComp?.team?.logo || '',
-            score: awayComp?.score || '0',
-            record: awayComp?.records?.[0]?.summary,
-            color: awayComp?.team?.color ? `#${awayComp?.team?.color}` : undefined
+          // Filter for CFB: Must involve at least one team from the 7 conferences on site
+          if (leagueKey === 'college-football' && cfbTeamMap) {
+            const hasHome = cfbTeamMap.has(homeTeamId);
+            const hasAway = cfbTeamMap.has(awayTeamId);
+            if (!hasHome && !hasAway) {
+              return null;
+            }
           }
-        };
-      });
 
-      cache.scoreboard[leagueKey] = { timestamp: now, data: games };
-      return games;
+          // Strict Week Boundary: Game sports calendar date must fall between Wednesday and Tuesday
+          const sportsDate = getSportsDateYMD(ev.date);
+          if (sportsDate < week.startWednesday || sportsDate > week.endTuesday) {
+            return null;
+          }
+
+          const isLive = statusType?.state === 'in';
+          const isCompleted = statusType?.completed === true;
+          const broadcast = comp?.broadcasts?.[0]?.names?.[0] || comp?.geoBroadcasts?.[0]?.media?.shortName;
+
+          const homeCfbTeam = cfbTeamMap?.get(homeTeamId);
+          const awayCfbTeam = cfbTeamMap?.get(awayTeamId);
+
+          return {
+            id: String(ev.id),
+            league: leagueKey,
+            date: ev.date,
+            name: ev.name,
+            shortName: ev.shortName,
+            status: statusType?.name || 'STATUS_SCHEDULED',
+            statusDetail: statusType?.shortDetail || statusType?.detail || 'Scheduled',
+            isLive,
+            isCompleted,
+            broadcast,
+            venue: comp?.venue?.fullName,
+            homeTeam: {
+              id: homeTeamId,
+              name: homeComp?.team?.displayName || 'Home Team',
+              abbreviation: homeComp?.team?.abbreviation || '',
+              logo: homeComp?.team?.logo || '',
+              score: homeComp?.score || '0',
+              record: homeComp?.records?.[0]?.summary,
+              color: homeComp?.team?.color ? `#${homeComp?.team?.color}` : undefined,
+              conference: homeCfbTeam?.conference
+            },
+            awayTeam: {
+              id: awayTeamId,
+              name: awayComp?.team?.displayName || 'Away Team',
+              abbreviation: awayComp?.team?.abbreviation || '',
+              logo: awayComp?.team?.logo || '',
+              score: awayComp?.score || '0',
+              record: awayComp?.records?.[0]?.summary,
+              color: awayComp?.team?.color ? `#${awayComp?.team?.color}` : undefined,
+              conference: awayCfbTeam?.conference
+            }
+          };
+        })
+        .filter((g: any): g is SportGame => Boolean(g));
+
+      cache.scoreboard[cacheKey] = { timestamp: now, data: games };
+      return { games, week };
     } catch (err) {
       console.error(`Error fetching scoreboard for ${leagueKey}:`, err);
-      return cached?.data || [];
+      return { games: cached?.data || [], week };
     }
   },
 

@@ -8,7 +8,8 @@ import { QuizResults } from './components/quiz/QuizResults.js';
 import { FavoritesHub } from './components/fanhub/FavoritesHub.js';
 import { LeaderboardView } from './components/leaderboard/LeaderboardView.js';
 import { ProfileView } from './components/profile/ProfileView.js';
-import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, QuizLeague, League } from './types/sports.js';
+import { ForgotPasswordView } from './components/auth/ForgotPasswordView.js';
+import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, QuizLeague, League, SportsWeekInfo } from './types/sports.js';
 import { QuizSettings, QuizQuestion, QuizResultSummary } from './types/quiz.js';
 import { User } from './types/auth.js';
 import { api } from './services/api.js';
@@ -16,7 +17,7 @@ import { sounds } from './services/sounds.js';
 
 export const App: React.FC = () => {
   // Navigation & UI State
-  const [currentTab, setCurrentTab] = useState<'quiz' | 'fanhub' | 'leaderboard' | 'profile'>('quiz');
+  const [currentTab, setCurrentTab] = useState<'quiz' | 'fanhub' | 'leaderboard' | 'profile' | 'forgot-password'>('quiz');
   const [showTicker, setShowTicker] = useState(true);
   const [isMuted, setIsMuted] = useState(() => sounds.getMuted());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -29,6 +30,8 @@ export const App: React.FC = () => {
   const [allTeams, setAllTeams] = useState<SportTeam[]>([]);
   const [games, setGames] = useState<SportGame[]>([]);
   const [news, setNews] = useState<SportNewsArticle[]>([]);
+  const [selectedScoreDate, setSelectedScoreDate] = useState<string>('');
+  const [scoreWeek, setScoreWeek] = useState<SportsWeekInfo | null>(null);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [loadingGames, setLoadingGames] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
@@ -72,23 +75,62 @@ export const App: React.FC = () => {
 
     // 3. Load scoreboard & news
     loadScoresAndNews();
+
+    // 4. Check URL for /forgot-password or #forgot-password
+    const path = window.location.pathname;
+    const hash = window.location.hash;
+    if (path === '/forgot-password' || hash === '#forgot-password') {
+      setCurrentTab('forgot-password');
+    }
+
+    const handleUrlChange = () => {
+      if (window.location.pathname === '/forgot-password' || window.location.hash === '#forgot-password') {
+        setCurrentTab('forgot-password');
+      }
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, []);
 
-  const loadScoresAndNews = async () => {
+  const loadScoresAndNews = async (dateParam?: string) => {
     setLoadingGames(true);
     setLoadingNews(true);
     try {
-      const [g, n] = await Promise.all([
-        api.getScoreboard(),
+      const [scoreData, n] = await Promise.all([
+        api.getScoreboard(undefined, dateParam),
         api.getNews()
       ]);
-      setGames(g);
+      setGames(scoreData.games);
+      setScoreWeek(scoreData.week);
+      if (dateParam) {
+        setSelectedScoreDate(dateParam);
+      } else if (scoreData.week?.selectedDate) {
+        setSelectedScoreDate(scoreData.week.selectedDate);
+      }
       setNews(n);
     } catch (err) {
       console.error('Failed to load scoreboard/news:', err);
     } finally {
       setLoadingGames(false);
       setLoadingNews(false);
+    }
+  };
+
+  const handleScoreDateChange = async (newDate: string) => {
+    setSelectedScoreDate(newDate);
+    setLoadingGames(true);
+    try {
+      const scoreData = await api.getScoreboard(undefined, newDate);
+      setGames(scoreData.games);
+      setScoreWeek(scoreData.week);
+    } catch (err) {
+      console.error('Failed to load scoreboard for date:', err);
+    } finally {
+      setLoadingGames(false);
     }
   };
 
@@ -229,7 +271,12 @@ export const App: React.FC = () => {
       />
 
       {/* Live Scoreboard Ticker */}
-      {showTicker && <Ticker />}
+      {showTicker && (
+        <Ticker
+          favorites={favorites}
+          onNavigateToHub={() => setCurrentTab('fanhub')}
+        />
+      )}
 
       {/* Main View Body */}
       <main className="flex-1">
@@ -277,7 +324,10 @@ export const App: React.FC = () => {
             news={news}
             loadingGames={loadingGames}
             loadingNews={loadingNews}
-            onRefresh={loadScoresAndNews}
+            scoreWeek={scoreWeek}
+            selectedDate={selectedScoreDate}
+            onDateChange={handleScoreDateChange}
+            onRefresh={() => loadScoresAndNews(selectedScoreDate)}
             onToggleFavorite={handleToggleFavorite}
             isLoggedIn={Boolean(user && !user.id.startsWith('guest_'))}
             onPromptAuth={() => setIsAuthModalOpen(true)}
@@ -301,6 +351,24 @@ export const App: React.FC = () => {
             onStartQuiz={() => { setCurrentTab('quiz'); setQuizState('lobby'); }}
           />
         )}
+
+        {currentTab === 'forgot-password' && (
+          <div className="min-h-[calc(100vh-160px)] flex items-center justify-center p-4 sm:p-6">
+            <ForgotPasswordView
+              isStandalonePage={true}
+              onSuccess={(u) => {
+                handleAuthSuccess(u);
+                setCurrentTab('quiz');
+                window.history.replaceState(null, '', '/');
+              }}
+              onBackToLogin={() => {
+                setCurrentTab('quiz');
+                window.history.replaceState(null, '', '/');
+                setIsAuthModalOpen(true);
+              }}
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer */}
@@ -311,8 +379,18 @@ export const App: React.FC = () => {
             <span>•</span>
             <span>Sports Logo Quiz & FanHub</span>
           </div>
-          <div>
-            Powered by live sports data for NFL, NBA, College Football (SEC, Big Ten, Big 12, ACC, Sun Belt, SWAC, Pac-12), and WNBA.
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setCurrentTab('forgot-password');
+                window.history.replaceState(null, '', '/forgot-password');
+              }}
+              className="text-slate-500 hover:text-sky-600 font-medium hover:underline transition-colors"
+            >
+              Forgot Password
+            </button>
+            <span>•</span>
+            <span>NFL • NBA • College Football • WNBA</span>
           </div>
         </div>
       </footer>

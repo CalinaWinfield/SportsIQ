@@ -1,4 +1,4 @@
-import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, League, QuizLeague } from '../types/sports.js';
+import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, League, QuizLeague, SportsWeekInfo } from '../types/sports.js';
 import { User, LeaderboardEntry, UserStats } from '../types/auth.js';
 
 const TOKEN_KEY = 'sportiq_token';
@@ -72,6 +72,41 @@ export const api = {
       body: JSON.stringify({ avatar })
     });
     return data.user;
+  },
+
+  // Forgot Password Flow
+  async initForgotPassword(usernameOrEmail: string): Promise<{
+    resetToken: string;
+    username: string;
+    questionType: 'favorite_team' | 'avatar';
+    question: string;
+    instruction: string;
+    options: Array<{ id: string; name: string; logo?: string; league?: string; avatarId?: string }>;
+  }> {
+    return request('/api/auth/forgot-password/init', {
+      method: 'POST',
+      body: JSON.stringify({ usernameOrEmail })
+    });
+  },
+
+  async verifyForgotPassword(payload: {
+    resetToken: string;
+    selectedOptionId?: string;
+    typedAnswer?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    return request('/api/auth/forgot-password/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async resetPassword(resetToken: string, newPassword: string): Promise<{ token: string; user: User }> {
+    const data = await request<{ token: string; user: User }>('/api/auth/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ resetToken, newPassword })
+    });
+    tokenStorage.set(data.token);
+    return data;
   },
 
   logout(): void {
@@ -162,10 +197,16 @@ export const api = {
     return res.teams || [];
   },
 
-  async getScoreboard(league?: League): Promise<SportGame[]> {
-    const qs = league ? `?league=${league}` : '';
-    const res = await request<{ games: SportGame[] }>(`/api/espn/scoreboard${qs}`);
-    return res.games || [];
+  async getScoreboard(league?: League, date?: string): Promise<{ games: SportGame[]; week: SportsWeekInfo }> {
+    const params = new URLSearchParams();
+    if (league) params.set('league', league);
+    if (date) params.set('date', date);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await request<{ games: SportGame[]; week: SportsWeekInfo }>(`/api/espn/scoreboard${qs}`);
+    return {
+      games: res.games || [],
+      week: res.week
+    };
   },
 
   async getNews(league?: League, teamId?: string): Promise<SportNewsArticle[]> {

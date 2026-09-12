@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SportIQ Sports Logo Quiz & ESPN FanHub
 
 A modern, full-stack sports quiz game and personalized fan hub for **NFL, NBA, College Football (CFB), and WNBA**.
@@ -70,4 +69,3 @@ npm run dev
 npm run build
 npm start
 ```
-=======

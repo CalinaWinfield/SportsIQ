@@ -24,13 +24,13 @@ router.get('/teams', async (req, res) => {
 router.get('/scoreboard', async (req, res) => {
   try {
     const league = req.query.league as string;
-    if (league && ['nfl', 'nba', 'college-football', 'wnba'].includes(league)) {
-      const games = await espnService.getScoreboard(league as any);
-      res.json({ games });
-    } else {
-      const games = await espnService.getScoreboard();
-      res.json({ games });
-    }
+    const date = req.query.date as string;
+    const validLeague = league && ['nfl', 'nba', 'college-football', 'wnba'].includes(league)
+      ? (league as any)
+      : undefined;
+
+    const result = await espnService.getScoreboard(validLeague, date);
+    res.json(result);
   } catch (err) {
     console.error('Error in /api/espn/scoreboard:', err);
     res.status(500).json({ error: 'Failed to fetch scoreboard' });

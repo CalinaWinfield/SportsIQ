@@ -1,4 +1,4 @@
-﻿export type League = 'nfl' | 'nba' | 'college-football' | 'wnba';
+export type League = 'nfl' | 'nba' | 'college-football' | 'wnba';
 export type QuizLeague = League | 'all';
 
 export interface SportTeam {
@@ -17,6 +17,16 @@ export interface SportTeam {
   standing?: string;
   record?: string;
   isFBSorSWAC?: boolean;
+}
+
+export interface SportsWeekInfo {
+  startWednesday: string; // YYYY-MM-DD
+  endTuesday: string;     // YYYY-MM-DD
+  startFormatted: string; // YYYYMMDD
+  endFormatted: string;   // YYYYMMDD
+  espnDatesParam: string; // YYYYMMDD-YYYYMMDD
+  displayLabel: string;   // e.g. "Wed, Sep 9 – Tue, Sep 15, 2026"
+  selectedDate: string;   // YYYY-MM-DD
 }
 
 export interface SportGame {
@@ -39,6 +49,7 @@ export interface SportGame {
     score: string;
     record?: string;
     color?: string;
+    conference?: string;
   };
   awayTeam: {
     id: string;
@@ -48,6 +59,7 @@ export interface SportGame {
     score: string;
     record?: string;
     color?: string;
+    conference?: string;
   };
 }
 

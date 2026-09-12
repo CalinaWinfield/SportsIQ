@@ -12,7 +12,7 @@
       "id": "user_1788979942203_tdry11",
       "username": "linawina2000",
       "email": "calinafield@gmail.com",
-      "passwordHash": "$2a$10$ImoPUx8skpafTpMhWTrTtefsetoHeYM7YEHXLYJUI9BbQQy8A1rIO",
+      "passwordHash": "$2a$10$bKAXABIOx3gedV7gv/ncledXGMwuCv30zGxdqpyXT4TNfuXT7SSEG",
       "avatar": "??",
       "createdAt": "2026-09-09T18:52:22.204Z"
     },
@@ -417,6 +417,50 @@
       "abbreviation": "LA",
       "color": "#552583",
       "createdAt": "2026-09-10T22:15:44.536Z"
+    },
+    {
+      "id": "fav_1789170971128_8fga",
+      "userId": "user_1789072671969_sxxgvl",
+      "league": "nfl",
+      "teamId": "7",
+      "teamName": "Denver Broncos",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
+      "abbreviation": "DEN",
+      "color": "#0a2343",
+      "createdAt": "2026-09-11T23:56:11.128Z"
+    },
+    {
+      "id": "fav_1789171331561_zlbe",
+      "userId": "user_1789072671969_sxxgvl",
+      "league": "nfl",
+      "teamId": "15",
+      "teamName": "Miami Dolphins",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
+      "abbreviation": "MIA",
+      "color": "#008e97",
+      "createdAt": "2026-09-12T00:02:11.561Z"
+    },
+    {
+      "id": "fav_1789171354124_z346",
+      "userId": "user_1789072671969_sxxgvl",
+      "league": "nba",
+      "teamId": "23",
+      "teamName": "Sacramento Kings",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/sac.png",
+      "abbreviation": "SAC",
+      "color": "#5a2d81",
+      "createdAt": "2026-09-12T00:02:34.124Z"
+    },
+    {
+      "id": "fav_1789171365151_d92g",
+      "userId": "user_1789072671969_sxxgvl",
+      "league": "college-football",
+      "teamId": "256",
+      "teamName": "James Madison Dukes",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/256.png",
+      "abbreviation": "JMU",
+      "color": "#450084",
+      "createdAt": "2026-09-12T00:02:45.151Z"
     }
   ]
 }

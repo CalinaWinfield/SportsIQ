@@ -60,8 +60,9 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
                     <span>{game.statusDetail}</span>
                   </span>
                 ) : timeInfo.isCompleted ? (
-                  <span className="font-bold text-slate-500 uppercase text-[11px]">
-                    {game.statusDetail}
+                  <span className="flex items-center gap-1.5 font-bold text-slate-700 text-xs bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg truncate shadow-2xs">
+                    <Calendar className="w-3 h-3 flex-shrink-0 text-slate-500" />
+                    <span className="truncate">{timeInfo.startTimeFormatted}</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 font-bold text-sky-700 text-xs bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-lg truncate shadow-2xs">
@@ -71,7 +72,9 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
                 )}
 
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-mono text-slate-600 uppercase flex-shrink-0 border border-slate-200">
-                  {game.league.toUpperCase()}
+                  {game.league === 'college-football'
+                    ? (game.homeTeam.conference || game.awayTeam.conference ? `CFB • ${game.homeTeam.conference || game.awayTeam.conference}` : 'CFB')
+                    : game.league.toUpperCase()}
                 </span>
               </div>
 
@@ -102,11 +105,16 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
                     <div className={`text-sm font-bold truncate ${isAwayWinner ? 'text-slate-950 font-black' : 'text-slate-800'}`}>
                       {game.awayTeam.name}
                     </div>
-                    {game.awayTeam.record && (
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        {game.awayTeam.record}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                      {game.awayTeam.conference && (
+                        <span className="text-[9px] font-bold text-sky-700 bg-sky-50 px-1 rounded border border-sky-200 uppercase">
+                          {game.awayTeam.conference}
+                        </span>
+                      )}
+                      {game.awayTeam.record && (
+                        <span>{game.awayTeam.record}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -134,11 +142,16 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
                     <div className={`text-sm font-bold truncate ${isHomeWinner ? 'text-slate-950 font-black' : 'text-slate-800'}`}>
                       {game.homeTeam.name}
                     </div>
-                    {game.homeTeam.record && (
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        {game.homeTeam.record}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                      {game.homeTeam.conference && (
+                        <span className="text-[9px] font-bold text-sky-700 bg-sky-50 px-1 rounded border border-sky-200 uppercase">
+                          {game.homeTeam.conference}
+                        </span>
+                      )}
+                      {game.homeTeam.record && (
+                        <span>{game.homeTeam.record}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -152,14 +165,20 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
 
             {/* Scheduled Start Time Footer / Venue */}
             <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              {!game.isCompleted && !game.isLive ? (
+              {game.isCompleted ? (
+                <div className="flex items-center gap-1 font-medium text-slate-500 truncate">
+                  <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                  <span>Final • Played on {timeInfo.gameDateFormatted || 'recently'}</span>
+                </div>
+              ) : !game.isLive ? (
                 <div className="flex items-center gap-1 font-medium text-sky-700 truncate">
                   <Clock className="w-3 h-3 text-sky-500 flex-shrink-0" />
                   <span>Kickoff / Tip-off: {timeInfo.startTimeFormatted}</span>
                 </div>
               ) : (
-                <div className="text-slate-500">
-                  {game.isCompleted ? 'Final Result' : 'Game in Progress'}
+                <div className="flex items-center gap-1 font-bold text-emerald-600 truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>Game in Progress</span>
                 </div>
               )}
 

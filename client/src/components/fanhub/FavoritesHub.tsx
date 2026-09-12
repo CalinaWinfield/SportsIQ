@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, Plus, RefreshCw, Radio, Calendar, Newspaper, Award, Filter, X } from 'lucide-react';
-import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, League } from '../../types/sports.js';
+import { Heart, Plus, RefreshCw, Radio, Calendar, Newspaper, Award, Filter, X, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { SportTeam, SportGame, SportNewsArticle, FavoriteTeam, League, SportsWeekInfo } from '../../types/sports.js';
 import { ScoresGrid } from './ScoresGrid.js';
 import { ScheduleList } from './ScheduleList.js';
 import { NewsGrid } from './NewsGrid.js';
 import { StandingsCard } from './StandingsCard.js';
 import { TeamPickerModal } from './TeamPickerModal.js';
 import { sounds } from '../../services/sounds.js';
+import { getSportsWeekRange, getSportsDateYMD, getSportsWeekDays, shiftWeekDate } from '../../utils/dateUtils.js';
 
 interface FavoritesHubProps {
   favorites: FavoriteTeam[];
@@ -15,6 +16,9 @@ interface FavoritesHubProps {
   news: SportNewsArticle[];
   loadingGames: boolean;
   loadingNews: boolean;
+  scoreWeek?: SportsWeekInfo | null;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
   onRefresh: () => void;
   onToggleFavorite: (team: SportTeam) => void;
   isLoggedIn: boolean;
@@ -28,6 +32,9 @@ export const FavoritesHub: React.FC<FavoritesHubProps> = ({
   news,
   loadingGames,
   loadingNews,
+  scoreWeek,
+  selectedDate,
+  onDateChange,
   onRefresh,
   onToggleFavorite,
   isLoggedIn,
@@ -36,7 +43,11 @@ export const FavoritesHub: React.FC<FavoritesHubProps> = ({
   const [activeTab, setActiveTab] = useState<'scores' | 'schedule' | 'news' | 'standings'>('scores');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [selectedLeagueFilter, setSelectedLeagueFilter] = useState<League | 'all'>('all');
-  const [viewScope, setViewScope] = useState<'my_teams' | 'all_games'>('my_teams');
+  const [viewScope, setViewScope] = useState<'my_teams' | 'all_games'>('all_games');
+  const [selectedDayKey, setSelectedDayKey] = useState<'all' | string>('all');
+
+  const activeWeek = useMemo(() => scoreWeek || getSportsWeekRange(selectedDate), [scoreWeek, selectedDate]);
+  const weekDays = useMemo(() => getSportsWeekDays(activeWeek), [activeWeek]);
 
   const followedTeamIds = useMemo(() => {
     return new Set(favorites.map(f => `${f.league}_${f.teamId}`));
@@ -46,7 +57,7 @@ export const FavoritesHub: React.FC<FavoritesHubProps> = ({
     return allTeams.filter(t => followedTeamIds.has(`${t.league}_${t.id}`));
   }, [allTeams, followedTeamIds]);
 
-  const displayGames = useMemo(() => {
+  const gamesMatchingLeagueAndScope = useMemo(() => {
     return games.filter(g => {
       const matchLeague = selectedLeagueFilter === 'all' || g.league === selectedLeagueFilter;
       if (viewScope === 'all_games') {
@@ -57,6 +68,24 @@ export const FavoritesHub: React.FC<FavoritesHubProps> = ({
       return matchLeague && (isHomeFollowed || isAwayFollowed);
     });
   }, [games, selectedLeagueFilter, viewScope, followedTeamIds]);
+
+  const gamesCountByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const g of gamesMatchingLeagueAndScope) {
+      const ymd = getSportsDateYMD(g.date);
+      counts[ymd] = (counts[ymd] || 0) + 1;
+    }
+    return counts;
+  }, [gamesMatchingLeagueAndScope]);
+
+  const displayGames = useMemo(() => {
+    if (selectedDayKey === 'all') {
+      return gamesMatchingLeagueAndScope;
+    }
+    return gamesMatchingLeagueAndScope.filter(g => {
+      return getSportsDateYMD(g.date) === selectedDayKey;
+    });
+  }, [gamesMatchingLeagueAndScope, selectedDayKey]);
 
   const displayNews = useMemo(() => {
     if (selectedLeagueFilter === 'all') return news;
@@ -253,6 +282,145 @@ export const FavoritesHub: React.FC<FavoritesHubProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Week Selector & Date Navigator (Wednesday to Tuesday) */}
+      {(activeTab === 'scores' || activeTab === 'schedule') && (
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Week Title & Label */}
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-600 flex-shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs sm:text-sm font-black text-slate-900 uppercase font-sports tracking-wide">
+                    {activeWeek.displayLabel}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">
+                    Wed – Tue Week
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Showing {displayGames.length} games for this sports week
+                </div>
+              </div>
+            </div>
+
+            {/* Week Stepper & Date Picker */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playClick();
+                  const prevDate = shiftWeekDate(activeWeek.selectedDate, 'prev');
+                  onDateChange?.(prevDate);
+                  setSelectedDayKey('all');
+                }}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+                title="Previous Week (Wed - Tue)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Prev Week</span>
+              </button>
+
+              {/* This Week Shortcut (if not currently on this week) */}
+              {activeWeek.startWednesday !== getSportsWeekRange().startWednesday && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    const todayStr = getSportsDateYMD(new Date());
+                    onDateChange?.(todayStr);
+                    setSelectedDayKey('all');
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-700 text-xs font-bold transition-colors shadow-2xs"
+                >
+                  This Week
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playClick();
+                  const nextDate = shiftWeekDate(activeWeek.selectedDate, 'next');
+                  onDateChange?.(nextDate);
+                  setSelectedDayKey('all');
+                }}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+                title="Next Week (Wed - Tue)"
+              >
+                <span className="hidden sm:inline">Next Week</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Native Calendar Date Picker to jump directly to any date */}
+              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200">
+                <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">Jump to:</span>
+                <input
+                  type="date"
+                  value={activeWeek.selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      sounds.playClick();
+                      onDateChange?.(e.target.value);
+                      setSelectedDayKey('all');
+                    }
+                  }}
+                  title="Pick a date to jump to its Wednesday-to-Tuesday week"
+                  className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-2xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Day of Week Filter Tabs (Wednesday to Tuesday) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => { sounds.playClick(); setSelectedDayKey('all'); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                selectedDayKey === 'all'
+                  ? 'bg-slate-900 text-white font-black shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              <span>All Week</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                selectedDayKey === 'all' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {gamesMatchingLeagueAndScope.length}
+              </span>
+            </button>
+
+            {weekDays.map(day => {
+              const count = gamesCountByDate[day.dateStr] || 0;
+              const isSelected = selectedDayKey === day.dateStr;
+
+              return (
+                <button
+                  key={day.dateStr}
+                  type="button"
+                  onClick={() => { sounds.playClick(); setSelectedDayKey(day.dateStr); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                    isSelected
+                      ? 'bg-sky-500 text-white font-black shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                  }`}
+                >
+                  <span>{day.formatted}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                    isSelected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Content Feed Section */}
       <div>

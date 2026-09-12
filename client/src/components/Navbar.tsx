@@ -1,12 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import { Trophy, Tv, Award, User as UserIcon, Volume2, VolumeX, Radio, LogIn } from 'lucide-react';
 import { User } from '../types/auth.js';
 import { sounds } from '../services/sounds.js';
 import { AvatarBadge } from './AvatarBadge.js';
 
 interface NavbarProps {
-  currentTab: 'quiz' | 'fanhub' | 'leaderboard' | 'profile';
-  setCurrentTab: (tab: 'quiz' | 'fanhub' | 'leaderboard' | 'profile') => void;
+  currentTab: 'quiz' | 'fanhub' | 'leaderboard' | 'profile' | 'forgot-password';
+  setCurrentTab: (tab: 'quiz' | 'fanhub' | 'leaderboard' | 'profile' | 'forgot-password') => void;
   user: User | null;
   onOpenAuth: () => void;
   showTicker: boolean;
