@@ -1,4 +1,5 @@
-# SportIQ Sports Logo Quiz & ESPN FanHub
+# SportIQ
+## Sports Logo Quiz & ESPN FanHub
 
 A modern, full-stack sports quiz game and personalized fan hub for **NFL, NBA, College Football (CFB), and WNBA**.
 
