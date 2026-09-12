@@ -164,30 +164,29 @@ export const ScoresGrid: React.FC<ScoresGridProps> = ({
             </div>
 
             {/* Scheduled Start Time Footer / Venue */}
-            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              {game.isCompleted ? (
-                <div className="flex items-center gap-1 font-medium text-slate-500 truncate">
-                  <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                  <span>Final • Played on {timeInfo.gameDateFormatted || 'recently'}</span>
-                </div>
-              ) : !game.isLive ? (
-                <div className="flex items-center gap-1 font-medium text-sky-700 truncate">
-                  <Clock className="w-3 h-3 text-sky-500 flex-shrink-0" />
-                  <span>Kickoff / Tip-off: {timeInfo.startTimeFormatted}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 font-bold text-emerald-600 truncate">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span>Game in Progress</span>
-                </div>
-              )}
+            {(game.isCompleted || !game.isLive || Boolean(game.venue)) && (
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                {game.isCompleted ? (
+                  <div className="flex items-center gap-1 font-medium text-slate-500 truncate">
+                    <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                    <span>Final • Played on {timeInfo.gameDateFormatted || 'recently'}</span>
+                  </div>
+                ) : !game.isLive ? (
+                  <div className="flex items-center gap-1 font-medium text-sky-700 truncate">
+                    <Clock className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                    <span>Kickoff / Tip-off: {timeInfo.startTimeFormatted}</span>
+                  </div>
+                ) : (
+                  <div />
+                )}
 
-              {game.venue && (
-                <div className="text-slate-400 truncate max-w-[150px] text-right">
-                  📍 {game.venue}
-                </div>
-              )}
-            </div>
+                {game.venue && (
+                  <div className="text-slate-400 truncate max-w-[180px] text-right ml-auto">
+                    📍 {game.venue}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
